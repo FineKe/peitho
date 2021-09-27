@@ -209,6 +209,8 @@ func (k8s *K8sClient) UpdateDeployment(ctx context.Context, name string) error {
 		},
 	)
 
+	deployment.ResourceVersion = ""
+
 	// update deployment
 	_, err = k8s.k8sClientSet.AppsV1().
 		Deployments(k8s.namespace).
