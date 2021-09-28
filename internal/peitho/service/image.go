@@ -11,8 +11,8 @@ import (
 	"github.com/marmotedu/errors"
 	"github.com/tianrandailove/peitho/pkg/docker"
 	"github.com/tianrandailove/peitho/pkg/log"
-	"io"
 	"io/ioutil"
+	"strings"
 	"time"
 )
 
@@ -71,60 +71,57 @@ func (i imageService) Build(ctx context.Context, dockerfile string, tags []strin
 		return nil, err
 	}
 
-	// async to push image
-	go func() {
-		// waitting for image build
-		for t := 0; t < 100; t++ {
-			_, inspectErr := i.Inspect(ctx, tags[0])
-			if inspectErr == nil {
-				break
-			}
-			time.Sleep(1 * time.Second)
+	// waitting for image build
+	for t := 0; t < 300; t++ {
+		_, inspectErr := i.Inspect(ctx, tags[0])
+		if inspectErr == nil {
+			break
 		}
-		log.Infof("build image %s success", tags[0])
-		log.Infof("ready push")
+		time.Sleep(1 * time.Second)
+	}
+	log.Infof("build image %s complete", tags[0])
+	log.Infof("ready push")
 
-		oldTag := tags[0]
-		newTag := fmt.Sprintf("%s/%s/%s", i.docker.GetServerAddress(), i.docker.GetProjectName(), tags[0])
+	oldTag := tags[0]
+	newTag := fmt.Sprintf("%s/%s/%s", i.docker.GetServerAddress(), i.docker.GetProjectName(), tags[0])
 
-		log.Debugf("oldTag:%s", oldTag)
-		log.Debugf("newTag:%s", newTag)
+	log.Debugf("oldTag:%s", oldTag)
+	log.Debugf("newTag:%s", newTag)
 
-		if tagErr := i.AddTag(ctx, oldTag, newTag); tagErr != nil {
-			log.Errorf("add new tag failed: %v", tagErr)
+	if tagErr := i.AddTag(ctx, oldTag, newTag); tagErr != nil {
+		log.Errorf("add new tag failed: %v", tagErr)
 
-			return
-		}
+		return nil, tagErr
+	}
 
-		pushOpt := types.ImagePushOptions{}
-		auth, authErr := i.docker.RegistryAuth()
-		if err != nil {
-			log.Errorf("get registryAuth failed: %v", authErr)
-		} else {
-			pushOpt.RegistryAuth = auth
-		}
+	pushOpt := types.ImagePushOptions{}
+	auth, authErr := i.docker.RegistryAuth()
+	if err != nil {
+		log.Errorf("get registryAuth failed: %v", authErr)
+	} else {
+		pushOpt.RegistryAuth = auth
+	}
 
-		log.Debugf("RegistryAuth: %s", pushOpt.RegistryAuth)
+	log.Debugf("RegistryAuth: %s", pushOpt.RegistryAuth)
 
-		readerCloser, pushErr := i.docker.ImagePush(ctx, newTag, pushOpt)
-		defer readerCloser.Close()
+	readerCloser, pushErr := i.docker.ImagePush(ctx, newTag, pushOpt)
+	defer readerCloser.Close()
 
-		if pushErr != nil {
-			log.Errorf("push failed: %v", pushErr)
+	if pushErr != nil {
+		log.Errorf("push failed: %v", pushErr)
 
-			return
-		}
+		return nil, pushErr
+	}
 
-		pushResult, readErr := ioutil.ReadAll(readerCloser)
-		if readErr != nil {
-			log.Errorf("read falied: %v", readErr)
+	pushResult, readErr := ioutil.ReadAll(readerCloser)
+	if readErr != nil {
+		log.Errorf("read falied: %v", readErr)
 
-			return
-		}
+		return nil, readErr
+	}
 
-		log.Debugf(string(pushResult))
-		log.Infof("%s push success", newTag)
-	}()
+	log.Debugf(string(pushResult))
+	log.Infof("%s push success", newTag)
 
 	return resp.Body, err
 }
@@ -143,6 +140,24 @@ func (i imageService) Create(ctx context.Context, fromImage string) (io.ReadClos
 
 // Inspect inspect image information
 func (i imageService) Inspect(ctx context.Context, imageID string) (interface{}, error) {
+	if !strings.HasPrefix(imageID, i.docker.GetServerAddress()) {
+		// for chiancode, pull it firstly then inspect
+		imageID = fmt.Sprintf("%s/%s/%s", i.docker.GetServerAddress(), i.docker.GetProjectName(), imageID)
+
+		registryAuth, err := i.docker.RegistryAuth()
+		if err != nil {
+			return nil, errors.Errorf("failed get registryAuth: %v", err)
+		}
+
+		reader, err := i.docker.ImagePull(ctx, imageID, types.ImagePullOptions{RegistryAuth: registryAuth})
+		if err != nil {
+			return nil, ErrNoSuchImage
+		}
+		defer reader.Close()
+	}
+
+	log.Debugf("inspect %s image", imageID)
+
 	imageInspect, _, err := i.docker.ImageInspectWithRaw(ctx, imageID)
 	if err != nil {
 		log.Errorf("inspect image failed: %v", err)

@@ -24,6 +24,10 @@ const (
 	TLSClientKeyPath      string = "/etc/hyperledger/fabric/client.key"
 	TLSClientCertPath     string = "/etc/hyperledger/fabric/client.crt"
 	TLSClientRootCertPath string = "/etc/hyperledger/fabric/peer.crt"
+
+	TLSClientKeyFile      string = "/etc/hyperledger/fabric/client_pem.key"
+	TLSClientCertFile     string = "/etc/hyperledger/fabric/client_pem.crt"
+	TLSClientRootCertFile string = "/etc/hyperledger/fabric/peer.crt"
 )
 
 type K8sClient struct {
@@ -91,7 +95,7 @@ func (k8s *K8sClient) CreateChaincodeDeployment(
 				Value: array[1],
 			})
 
-			if "CORE_PEER_TLS_ENABLED" == array[0] && "true" == array[1] {
+			if "CORE_PEER_TLS_ENABLED" == array[0] && "false" == array[1] {
 				replicas = 1
 			}
 		}
@@ -170,6 +174,61 @@ func (k8s *K8sClient) UpdateDeployment(ctx context.Context, name string) error {
 	replicas := int32(1)
 	deployment.Spec.Replicas = &replicas
 
+	items := []v1.KeyToPath{
+		{
+			Key:  "client.key",
+			Path: "client.key",
+		},
+		{
+			Key:  "client.crt",
+			Path: "client.crt",
+		},
+		{
+			Key:  "peer.crt",
+			Path: "peer.crt",
+		},
+	}
+
+	volumeMounts := []v1.VolumeMount{
+		{
+			Name:      name + "-config",
+			MountPath: TLSClientKeyPath,
+			SubPath:   "client.key",
+		},
+		{
+			Name:      name + "-config",
+			MountPath: TLSClientCertPath,
+			SubPath:   "client.crt",
+		},
+		{
+			Name:      name + "-config",
+			MountPath: TLSClientRootCertPath,
+			SubPath:   "peer.crt",
+		},
+	}
+
+	if ctx.Value("version") == "v2.0.0" {
+		items = append(items, v1.KeyToPath{
+			Key:  "client_pem.key",
+			Path: "client_pem.key",
+		})
+		items = append(items, v1.KeyToPath{
+			Key:  "client_pem.crt",
+			Path: "client_pem.crt",
+		})
+
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      name + "-config",
+			MountPath: TLSClientKeyFile,
+			SubPath:   "client_pem.key",
+		})
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      name + "-config",
+			MountPath: TLSClientCertFile,
+			SubPath:   "client_pem.crt",
+		})
+	}
+
 	// append volumes
 	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, v1.Volume{
 		Name: name + "-config",
@@ -178,20 +237,7 @@ func (k8s *K8sClient) UpdateDeployment(ctx context.Context, name string) error {
 				LocalObjectReference: v1.LocalObjectReference{
 					Name: name + "-configmap",
 				},
-				Items: []v1.KeyToPath{
-					{
-						Key:  "client.key",
-						Path: "client.key",
-					},
-					{
-						Key:  "client.crt",
-						Path: "client.crt",
-					},
-					{
-						Key:  "peer.crt",
-						Path: "peer.crt",
-					},
-				},
+				Items: items,
 			},
 		},
 	})
@@ -199,21 +245,7 @@ func (k8s *K8sClient) UpdateDeployment(ctx context.Context, name string) error {
 	// mount volume
 	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
-		v1.VolumeMount{
-			Name:      name + "-config",
-			MountPath: TLSClientKeyPath,
-			SubPath:   "client.key",
-		},
-		v1.VolumeMount{
-			Name:      name + "-config",
-			MountPath: TLSClientCertPath,
-			SubPath:   "client.crt",
-		},
-		v1.VolumeMount{
-			Name:      name + "-config",
-			MountPath: TLSClientRootCertPath,
-			SubPath:   "peer.crt",
-		},
+		volumeMounts...,
 	)
 
 	deployment.ResourceVersion = ""

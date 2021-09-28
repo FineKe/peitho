@@ -95,27 +95,9 @@ func (cs *containerService) Create(ctx context.Context, containerID string, c Co
 		return &ContainerResult{Id: response.ID, Warnings: response.Warnings}, err
 	}
 
-	// check the image exists
-	//_, _, err := cs.docker.ImageInspectWithRaw(ctx, c.Image)
-	//if err != nil {
-	//	log.Errorf("inspect image failed: %v", err)
-	//
-	//	return nil, ErrNoSuchImage
-	//}
-	//log.Debugf("image %s exists", c.Image)
 
 	// deployment image tag
 	imageTag := fmt.Sprintf("%s/%s/%s", cs.docker.GetServerAddress(), cs.docker.GetProjectName(), c.Image)
-	log.Debugf("deployment image: %s", imageTag)
-
-	_, _, err := cs.docker.ImageInspectWithRaw(ctx, imageTag)
-	if err != nil {
-		log.Errorf("inspect image failed: %v", err)
-
-		return nil, ErrNoSuchImage
-	}
-
-	log.Debugf("image %s exists", imageTag)
 
 	// ensure registry has the image
 	// try pull
@@ -124,13 +106,16 @@ func (cs *containerService) Create(ctx context.Context, containerID string, c Co
 		RegistryAuth: registryAuth,
 	})
 	if err != nil {
+    
 		return nil, ErrNoSuchImage
 	}
 	defer output.Close()
 
+	log.Debugf("image %s exists", imageTag)
+
 	// in create chaincode containter phase
 	// use k8sapi to create deployment
-	podName := strings.ReplaceAll(containerID, ".", "-")
+	podName := util.GetDeploymentName(containerID)
 	log.Infof("create chiancode deployment, podname: %s.", podName)
 
 	// create chaincode deployment
@@ -209,13 +194,13 @@ func (cs *containerService) Upload(ctx context.Context, containerID string, path
 	}
 
 	// create tls configmap
-	name := strings.ReplaceAll(containerID, ".", "-")
+	name := util.GetDeploymentName(containerID)
 	if err := cs.k8s.CreateConfigMap(ctx, name, files); err != nil {
 		return err
 	}
 
 	// update chaincode deployment
-	if err := cs.k8s.UpdateDeployment(ctx, name); err != nil {
+	if err := cs.k8s.UpdateDeployment(context.WithValue(ctx, "version", "v2.0.0"), name); err != nil {
 		return err
 	}
 
@@ -252,7 +237,8 @@ func (cs *containerService) Start(ctx context.Context, containerID string) error
 
 	log.Info("start check chaincode deployment status....")
 
-	podName := strings.ReplaceAll(containerID, ".", "-")
+	podName := util.GetDeploymentName(containerID)
+
 	// check 100 time
 	for i := 0; i < 100; i++ {
 		ok, _ := cs.k8s.QueryDeploymentStatus(ctx, podName)
@@ -316,7 +302,8 @@ func (cs *containerService) Remove(ctx context.Context, containerID string) erro
 
 	// delete configmap and deployment
 	// ignore error
-	name := strings.ReplaceAll(containerID, ".", "-")
+
+	name := util.GetDeploymentName(containerID)
 	_ = cs.k8s.DeleteChaincodeDeployment(ctx, name)
 	_ = cs.k8s.DeleteConfigMapDeployment(ctx, name)
 
