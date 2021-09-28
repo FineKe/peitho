@@ -6,8 +6,6 @@ package container
 
 import (
 	"context"
-	"strings"
-
 	"github.com/gin-gonic/gin"
 
 	"github.com/tianrandailove/peitho/internal/peitho/service"
@@ -29,7 +27,7 @@ func (cc *ContainerController) Create(c *gin.Context) {
 
 	result, err := cc.srv.Containers().Create(context.Background(), ID, container)
 	if err != nil {
-		if strings.Contains(err.Error(), "no such image") {
+		if service.ErrNoSuchImage == err {
 			c.JSON(404, gin.H{
 				"message": err.Error(),
 			})
