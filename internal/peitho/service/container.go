@@ -201,7 +201,7 @@ func (cs *containerService) Upload(ctx context.Context, containerID string, path
 		ctx = context.WithValue(ctx, "version", "v2.0.0")
 	}
 	// update chaincode deployment
-	if err := cs.k8s.UpdateDeployment(ctx, name); err != nil {
+	if err := cs.k8s.UpdateDeployment(context.WithValue(ctx, "version", "v2.0.0"), name); err != nil {
 		return err
 	}
 
