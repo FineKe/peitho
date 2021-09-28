@@ -149,6 +149,8 @@ func (k8s *K8sClient) CreateChaincodeDeployment(
 	opts := metav1.CreateOptions{}
 	_, err := k8s.k8sClientSet.AppsV1().Deployments(k8s.namespace).Create(ctx, deployment, opts)
 	if err != nil {
+		log.Errorf("create deployment: %v", err)
+
 		return err
 	}
 

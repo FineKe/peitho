@@ -117,6 +117,17 @@ func (cs *containerService) Create(ctx context.Context, containerID string, c Co
 
 	log.Debugf("image %s exists", imageTag)
 
+	// ensure registry has the image
+	// try pull
+	registryAuth, err := cs.docker.RegistryAuth()
+	output, err := cs.docker.ImagePull(ctx, imageTag, types.ImagePullOptions{
+		RegistryAuth: registryAuth,
+	})
+	if err != nil {
+		return nil, ErrNoSuchImage
+	}
+	defer output.Close()
+
 	// in create chaincode containter phase
 	// use k8sapi to create deployment
 	podName := strings.ReplaceAll(containerID, ".", "-")
