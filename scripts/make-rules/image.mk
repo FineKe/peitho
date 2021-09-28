@@ -5,7 +5,8 @@
 DOCKER := docker
 DOCKER_SUPPORTED_API_VERSION ?= 1.32
 
-REGISTRY_PREFIX ?= tianrandailoving
+REGISTRY_PREFIX ?= 172.22.69.104:8099/platform
+#REGISTRY_PREFIX ?= tianrandailoving
 BASE_IMAGE = centos:centos8
 
 EXTRA_ARGS ?= --no-cache

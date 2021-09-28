@@ -95,7 +95,6 @@ func (cs *containerService) Create(ctx context.Context, containerID string, c Co
 		return &ContainerResult{Id: response.ID, Warnings: response.Warnings}, err
 	}
 
-
 	// deployment image tag
 	imageTag := fmt.Sprintf("%s/%s/%s", cs.docker.GetServerAddress(), cs.docker.GetProjectName(), c.Image)
 
@@ -106,7 +105,6 @@ func (cs *containerService) Create(ctx context.Context, containerID string, c Co
 		RegistryAuth: registryAuth,
 	})
 	if err != nil {
-    
 		return nil, ErrNoSuchImage
 	}
 	defer output.Close()
@@ -199,8 +197,11 @@ func (cs *containerService) Upload(ctx context.Context, containerID string, path
 		return err
 	}
 
+	if len(files) > 3 {
+		ctx = context.WithValue(ctx, "version", "v2.0.0")
+	}
 	// update chaincode deployment
-	if err := cs.k8s.UpdateDeployment(context.WithValue(ctx, "version", "v2.0.0"), name); err != nil {
+	if err := cs.k8s.UpdateDeployment(ctx, name); err != nil {
 		return err
 	}
 
@@ -238,7 +239,6 @@ func (cs *containerService) Start(ctx context.Context, containerID string) error
 	log.Info("start check chaincode deployment status....")
 
 	podName := util.GetDeploymentName(containerID)
-
 	// check 100 time
 	for i := 0; i < 100; i++ {
 		ok, _ := cs.k8s.QueryDeploymentStatus(ctx, podName)
@@ -302,7 +302,6 @@ func (cs *containerService) Remove(ctx context.Context, containerID string) erro
 
 	// delete configmap and deployment
 	// ignore error
-
 	name := util.GetDeploymentName(containerID)
 	_ = cs.k8s.DeleteChaincodeDeployment(ctx, name)
 	_ = cs.k8s.DeleteConfigMapDeployment(ctx, name)
