@@ -100,22 +100,13 @@ func (cs *containerService) Create(ctx context.Context, containerID string, c Co
 	if err != nil {
 		log.Errorf("inspect image failed: %v", err)
 
-		return nil, errors.New("no such image")
+		return nil, ErrNoSuchImage
 	}
 	log.Debugf("image %s exists", c.Image)
 
 	// deployment image tag
 	imageTag := fmt.Sprintf("%s/%s/%s", cs.docker.GetServerAddress(), cs.docker.GetProjectName(), c.Image)
 	log.Debugf("deployment image: %s", imageTag)
-
-	_, _, err = cs.docker.ImageInspectWithRaw(ctx, imageTag)
-	if err != nil {
-		log.Errorf("inspect image failed: %v", err)
-
-		return nil, errors.New("no such image")
-	}
-
-	log.Debugf("image %s exists", imageTag)
 
 	// in create chaincode containter phase
 	// use k8sapi to create deployment
