@@ -6,12 +6,10 @@ package container
 
 import (
 	"github.com/gin-gonic/gin"
-
-	"github.com/tianrandailove/peitho/pkg/log"
 )
 
 func (cc *ContainerController) Ping(c *gin.Context) {
-	log.L(c).Info("ping function called.")
+	//log.L(c).Info("ping function called.")
 
 	c.JSON(200, gin.H{"message": "OK"})
 }

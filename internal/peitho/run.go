@@ -30,7 +30,9 @@ func Run(cfg *config.Config) error {
 	// new service
 	service.Srv = service.NewService(dockerService, k8sService)
 
-	engine := gin.Default()
+	engine := gin.New()
+	engine.Use(gin.LoggerWithConfig(gin.LoggerConfig{SkipPaths: []string{"/_ping"}}))
+
 	initRouter(engine)
 
 	return engine.Run()
