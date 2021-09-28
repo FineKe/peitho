@@ -5,18 +5,21 @@
 package service
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"io"
-
 	"github.com/docker/docker/api/types"
 	"github.com/marmotedu/errors"
-
 	"github.com/tianrandailove/peitho/pkg/docker"
 	"github.com/tianrandailove/peitho/pkg/log"
+	"io"
+	"io/ioutil"
 )
 
+var (
+	ErrNoSuchImage = errors.New("no such image")
+)
+
+// DockerAuthentication define docker auth struct
 type DockerAuthentication struct {
 	Username      string `json:"username"`
 	Password      string `json:"password"`
@@ -24,6 +27,7 @@ type DockerAuthentication struct {
 	Serveraddress string `json:"serveraddress"`
 }
 
+// ImageSrv define imageSrv
 type ImageSrv interface {
 	Build(ctx context.Context, dockerfile string, tags []string, content io.Reader) (io.ReadCloser, error)
 	Create(ctx context.Context, fromImage string) (io.ReadCloser, error)
@@ -44,12 +48,8 @@ func newImage(srv *service) *imageService {
 	}
 }
 
-func (i imageService) Build(
-	ctx context.Context,
-	dockerfile string,
-	tags []string,
-	content io.Reader,
-) (io.ReadCloser, error) {
+// Build build an image and push it to registry
+func (i imageService) Build(ctx context.Context, dockerfile string, tags []string, content io.Reader) (io.ReadCloser, error) {
 	imageOptions := types.ImageBuildOptions{
 		Dockerfile: dockerfile,
 		Tags:       tags,
@@ -70,16 +70,6 @@ func (i imageService) Build(
 		return nil, err
 	}
 
-	reader := bufio.NewReader(resp.Body)
-
-	for {
-		line, _, readErr := reader.ReadLine()
-		if readErr != nil {
-			break
-		}
-		log.Debugf(string(line))
-	}
-
 	log.Infof("build image %s success", tags[0])
 
 	// async to push image
@@ -90,7 +80,7 @@ func (i imageService) Build(
 		log.Debugf("oldTag:%s", oldTag)
 		log.Debugf("newTag:%s", newTag)
 
-		if tagErr := i.docker.ImageTag(ctx, oldTag, newTag); tagErr != nil {
+		if tagErr := i.AddTag(ctx, oldTag, newTag); tagErr != nil {
 			log.Errorf("add new tag failed: %v", tagErr)
 
 			return
@@ -107,27 +97,29 @@ func (i imageService) Build(
 		log.Debugf("RegistryAuth: %s", pushOpt.RegistryAuth)
 
 		readerCloser, pushErr := i.docker.ImagePush(ctx, newTag, pushOpt)
+		defer readerCloser.Close()
+
 		if pushErr != nil {
 			log.Errorf("push failed: %v", pushErr)
 
 			return
 		}
 
-		reader := bufio.NewReader(readerCloser)
-		for {
-			line, _, readErr := reader.ReadLine()
-			if readErr != nil {
-				break
-			}
-			log.Debugf(string(line))
+		pushResult, readErr := ioutil.ReadAll(readerCloser)
+		if readErr != nil {
+			log.Errorf("read falied: %v", readErr)
+
+			return
 		}
 
+		log.Debugf(string(pushResult))
 		log.Infof("%s push success", newTag)
 	}()
 
 	return resp.Body, err
 }
 
+// Create pull a image
 func (i imageService) Create(ctx context.Context, fromImage string) (io.ReadCloser, error) {
 	resp, err := i.docker.ImagePull(ctx, fromImage, types.ImagePullOptions{})
 	if err != nil {
@@ -139,17 +131,19 @@ func (i imageService) Create(ctx context.Context, fromImage string) (io.ReadClos
 	return resp, nil
 }
 
+// Inspect inspect image information
 func (i imageService) Inspect(ctx context.Context, imageID string) (interface{}, error) {
 	imageInspect, _, err := i.docker.ImageInspectWithRaw(ctx, imageID)
 	if err != nil {
-		log.Errorf("inspect image failed %v", err)
+		log.Errorf("inspect image failed: %v", err)
 
-		return nil, err
+		return nil, ErrNoSuchImage
 	}
 
 	return imageInspect, nil
 }
 
+// AddTag add a new tag for image
 func (i imageService) AddTag(ctx context.Context, imageTag, newTag string) error {
 	if err := i.docker.ImageTag(ctx, imageTag, newTag); err != nil {
 		log.Errorf("add tag failed: %v", err)
@@ -160,6 +154,7 @@ func (i imageService) AddTag(ctx context.Context, imageTag, newTag string) error
 	return nil
 }
 
+// Push push a image
 func (i imageService) Push(ctx context.Context, imageTag string) (io.ReadCloser, error) {
 	auth, err := i.docker.RegistryAuth()
 	if err != nil {
