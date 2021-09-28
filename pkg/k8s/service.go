@@ -139,7 +139,7 @@ func (k8s *K8sClient) CreateChaincodeDeployment(
 						{
 							Name:            name,
 							Image:           image,
-							ImagePullPolicy: v1.PullAlways,
+							ImagePullPolicy: v1.PullIfNotPresent,
 							Env:             envs,
 							Command:         cmd,
 						},

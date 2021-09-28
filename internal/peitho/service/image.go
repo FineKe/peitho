@@ -7,11 +7,8 @@ package service
 import (
 	"context"
 	"fmt"
-	"io"
-
 	"github.com/docker/docker/api/types"
 	"github.com/marmotedu/errors"
-
 	"github.com/tianrandailove/peitho/pkg/docker"
 	"github.com/tianrandailove/peitho/pkg/log"
 	"io/ioutil"
