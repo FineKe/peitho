@@ -6,6 +6,8 @@ package image
 
 import (
 	"context"
+	"errors"
+	"github.com/tianrandailove/peitho/internal/peitho/service"
 
 	"github.com/gin-gonic/gin"
 
@@ -19,9 +21,15 @@ func (ic *ImageController) Inspect(c *gin.Context) {
 
 	value, err := ic.srv.Images().Inspect(context.Background(), imageID)
 	if err != nil {
-		c.JSON(500, gin.H{
-			"message": err.Error(),
-		})
+		if errors.As(err, service.ErrNoSuchImage) {
+			c.JSON(404, gin.H{
+				"message": err.Error(),
+			})
+		} else {
+			c.JSON(500, gin.H{
+				"message": err.Error(),
+			})
+		}
 
 		return
 	}

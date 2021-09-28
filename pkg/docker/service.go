@@ -22,6 +22,8 @@ import (
 	"github.com/tianrandailove/peitho/pkg/options"
 )
 
+const DOCKER_VERSION = "1.32"
+
 // Docker.
 type Docker struct {
 	DockerClient *client.Client
@@ -74,26 +76,21 @@ type DockerService interface {
 	ImageTag(ctx context.Context, image, ref string) error
 }
 
-// NewDocker new docker client from opt.
+// new docker client from opt.
 func newDocker(opt *options.DockerOption) (*Docker, error) {
-	docker, err := client.NewClientWithOpts(client.WithHost(opt.Endpoint), client.WithVersion("1.38"))
+	docker, err := client.NewClientWithOpts(client.WithHost(opt.Endpoint), client.WithVersion(DOCKER_VERSION))
 	if err != nil {
 		log.Errorf("new docker client failed: %v", err)
 
 		return nil, err
 	}
 
-	go func() {
-		for {
-			_, err := docker.Ping(context.Background())
-			if err != nil {
-				log.Errorf("ping docker server failed: %v", err)
-			}
-			log.Info("docker server alive")
-
-			time.Sleep(5 * time.Second)
-		}
-	}()
+	_, err = docker.Ping(context.Background())
+	if err != nil {
+		log.Errorf("ping docker server failed: %v", err)
+		panic("docker is not healthy: " + err.Error())
+	}
+	log.Info("docker server alive")
 
 	return &Docker{
 		DockerClient: docker,
