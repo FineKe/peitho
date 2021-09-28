@@ -13,6 +13,7 @@ import (
 	"github.com/tianrandailove/peitho/pkg/log"
 	"io"
 	"io/ioutil"
+	"time"
 )
 
 var (
@@ -70,10 +71,19 @@ func (i imageService) Build(ctx context.Context, dockerfile string, tags []strin
 		return nil, err
 	}
 
-	log.Infof("build image %s success", tags[0])
-
 	// async to push image
 	go func() {
+		// waitting for image build
+		for t := 0; t < 100; t++ {
+			_, inspectErr := i.Inspect(ctx, tags[0])
+			if inspectErr == nil {
+				break
+			}
+			time.Sleep(1 * time.Second)
+		}
+		log.Infof("build image %s success", tags[0])
+		log.Infof("ready push")
+
 		oldTag := tags[0]
 		newTag := fmt.Sprintf("%s/%s/%s", i.docker.GetServerAddress(), i.docker.GetProjectName(), tags[0])
 
