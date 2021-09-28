@@ -6,7 +6,6 @@ package peitho
 
 import (
 	"github.com/gin-gonic/gin"
-
 	"github.com/tianrandailove/peitho/internal/peitho/controller/container"
 	"github.com/tianrandailove/peitho/internal/peitho/controller/image"
 	"github.com/tianrandailove/peitho/internal/peitho/service"

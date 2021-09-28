@@ -11,8 +11,10 @@ import (
 	"github.com/marmotedu/errors"
 	"github.com/tianrandailove/peitho/pkg/docker"
 	"github.com/tianrandailove/peitho/pkg/log"
+	"io"
 	"io/ioutil"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -39,6 +41,7 @@ type ImageSrv interface {
 
 type imageService struct {
 	docker docker.DockerService
+	lock   sync.Mutex
 }
 
 var _ ImageSrv = (*imageService)(nil)
@@ -46,11 +49,13 @@ var _ ImageSrv = (*imageService)(nil)
 func newImage(srv *service) *imageService {
 	return &imageService{
 		docker: srv.docker,
+		lock:   sync.Mutex{},
 	}
 }
 
 // Build build an image and push it to registry
-func (i imageService) Build(ctx context.Context, dockerfile string, tags []string, content io.Reader) (io.ReadCloser, error) {
+func (i *imageService) Build(ctx context.Context, dockerfile string, tags []string, content io.Reader) (io.ReadCloser, error) {
+
 	imageOptions := types.ImageBuildOptions{
 		Dockerfile: dockerfile,
 		Tags:       tags,
@@ -64,6 +69,8 @@ func (i imageService) Build(ctx context.Context, dockerfile string, tags []strin
 		return nil, errors.New("content is nil")
 	}
 
+	// lock
+	i.lock.Lock()
 	resp, err := i.docker.ImageBuild(ctx, content, imageOptions)
 	if err != nil {
 		log.Errorf("build image failed: %v", err)
@@ -79,6 +86,10 @@ func (i imageService) Build(ctx context.Context, dockerfile string, tags []strin
 		}
 		time.Sleep(1 * time.Second)
 	}
+
+	// release lock
+	i.lock.Unlock()
+
 	log.Infof("build image %s complete", tags[0])
 	log.Infof("ready push")
 
@@ -127,7 +138,7 @@ func (i imageService) Build(ctx context.Context, dockerfile string, tags []strin
 }
 
 // Create pull a image
-func (i imageService) Create(ctx context.Context, fromImage string) (io.ReadCloser, error) {
+func (i *imageService) Create(ctx context.Context, fromImage string) (io.ReadCloser, error) {
 	resp, err := i.docker.ImagePull(ctx, fromImage, types.ImagePullOptions{})
 	if err != nil {
 		log.Errorf("pull image failed: %v", err)
@@ -139,7 +150,7 @@ func (i imageService) Create(ctx context.Context, fromImage string) (io.ReadClos
 }
 
 // Inspect inspect image information
-func (i imageService) Inspect(ctx context.Context, imageID string) (interface{}, error) {
+func (i *imageService) Inspect(ctx context.Context, imageID string) (interface{}, error) {
 	if !strings.HasPrefix(imageID, i.docker.GetServerAddress()) {
 		// for chiancode, pull it firstly then inspect
 		imageID = fmt.Sprintf("%s/%s/%s", i.docker.GetServerAddress(), i.docker.GetProjectName(), imageID)
@@ -169,7 +180,7 @@ func (i imageService) Inspect(ctx context.Context, imageID string) (interface{},
 }
 
 // AddTag add a new tag for image
-func (i imageService) AddTag(ctx context.Context, imageTag, newTag string) error {
+func (i *imageService) AddTag(ctx context.Context, imageTag, newTag string) error {
 	if err := i.docker.ImageTag(ctx, imageTag, newTag); err != nil {
 		log.Errorf("add tag failed: %v", err)
 
@@ -180,7 +191,7 @@ func (i imageService) AddTag(ctx context.Context, imageTag, newTag string) error
 }
 
 // Push push a image
-func (i imageService) Push(ctx context.Context, imageTag string) (io.ReadCloser, error) {
+func (i *imageService) Push(ctx context.Context, imageTag string) (io.ReadCloser, error) {
 	auth, err := i.docker.RegistryAuth()
 	if err != nil {
 		log.Errorf("get RegistryAuth failed: %v", err)
