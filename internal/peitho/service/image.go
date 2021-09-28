@@ -80,7 +80,7 @@ func (i *imageService) Build(ctx context.Context, dockerfile string, tags []stri
 
 	// waitting for image build
 	for t := 0; t < 300; t++ {
-		_, inspectErr := i.Inspect(ctx, tags[0])
+		_, _, inspectErr := i.docker.ImageInspectWithRaw(ctx, tags[0])
 		if inspectErr == nil {
 			break
 		}
