@@ -70,8 +70,9 @@ func newContainer(srv *service) *containerService {
 	}
 }
 
+// Create create universal container or k8s deployment
 func (cs *containerService) Create(ctx context.Context, containerID string, c Container) (*ContainerResult, error) {
-	// if containterID == "" , it occurs in building chaincode binary package stage
+	// if containterID == "" , it occurs in building chaincode binary package phase
 	if containerID == "" {
 		config := &container.Config{
 			AttachStdout: c.AttachStdout,
@@ -95,29 +96,39 @@ func (cs *containerService) Create(ctx context.Context, containerID string, c Co
 	}
 
 	// check the image exists
-	_, _, err := cs.docker.ImageInspectWithRaw(ctx, c.Image)
-	if err != nil {
-		log.Errorf("inspect image failed: %v", err)
+	//_, _, err := cs.docker.ImageInspectWithRaw(ctx, c.Image)
+	//if err != nil {
+	//	log.Errorf("inspect image failed: %v", err)
+	//
+	//	return nil, ErrNoSuchImage
+	//}
+	//log.Debugf("image %s exists", c.Image)
 
-		return nil, errors.New("no such image")
-	}
-	log.Debugf("image %s exists", c.Image)
-
-	// deployment image path
+	// deployment image tag
 	imageTag := fmt.Sprintf("%s/%s/%s", cs.docker.GetServerAddress(), cs.docker.GetProjectName(), c.Image)
-
 	log.Debugf("deployment image: %s", imageTag)
 
-	_, _, err = cs.docker.ImageInspectWithRaw(ctx, imageTag)
+	_, _, err := cs.docker.ImageInspectWithRaw(ctx, imageTag)
 	if err != nil {
 		log.Errorf("inspect image failed: %v", err)
 
-		return nil, errors.New("no such image")
+		return nil, ErrNoSuchImage
 	}
 
 	log.Debugf("image %s exists", imageTag)
 
-	// in create chaincode containter stage
+	// ensure registry has the image
+	// try pull
+	registryAuth, err := cs.docker.RegistryAuth()
+	output, err := cs.docker.ImagePull(ctx, imageTag, types.ImagePullOptions{
+		RegistryAuth: registryAuth,
+	})
+	if err != nil {
+		return nil, ErrNoSuchImage
+	}
+	defer output.Close()
+
+	// in create chaincode containter phase
 	// use k8sapi to create deployment
 	podName := strings.ReplaceAll(containerID, ".", "-")
 	log.Infof("create chiancode deployment, podname: %s.", podName)
@@ -130,6 +141,7 @@ func (cs *containerService) Create(ctx context.Context, containerID string, c Co
 	return &ContainerResult{Id: podName, Warnings: nil}, nil
 }
 
+// Upload upload archive, like contract source code
 func (cs *containerService) Upload(ctx context.Context, containerID string, path string, content io.Reader) error {
 	// it's not chaincode container id
 	if util.IsContainerID(containerID) {
@@ -210,6 +222,7 @@ func (cs *containerService) Upload(ctx context.Context, containerID string, path
 	return nil
 }
 
+// Fetch fetch contract bin
 func (cs *containerService) Fetch(ctx context.Context, containerID string, path string) (io.ReadCloser, error) {
 	reader, _, err := cs.docker.CopyFromContainer(ctx, containerID, path)
 	if err != nil {
@@ -221,6 +234,7 @@ func (cs *containerService) Fetch(ctx context.Context, containerID string, path 
 	return reader, nil
 }
 
+// Start start a universal container or waitting for deployment be ok
 func (cs *containerService) Start(ctx context.Context, containerID string) error {
 	if util.IsContainerID(containerID) {
 		err := cs.docker.ContainerStart(ctx, containerID, types.ContainerStartOptions{
@@ -239,7 +253,7 @@ func (cs *containerService) Start(ctx context.Context, containerID string) error
 	log.Info("start check chaincode deployment status....")
 
 	podName := strings.ReplaceAll(containerID, ".", "-")
-
+	// check 100 time
 	for i := 0; i < 100; i++ {
 		ok, _ := cs.k8s.QueryDeploymentStatus(ctx, podName)
 		if ok {
@@ -253,6 +267,7 @@ func (cs *containerService) Start(ctx context.Context, containerID string) error
 	return errors.New("check chaincode deployment status timeout")
 }
 
+// Stop stop a universal container
 func (cs *containerService) Stop(ctx context.Context, containerID string, timeout time.Duration) error {
 	if util.IsContainerID(containerID) {
 		err := cs.docker.ContainerStop(ctx, containerID, &timeout)
@@ -268,6 +283,7 @@ func (cs *containerService) Stop(ctx context.Context, containerID string, timeou
 	return nil
 }
 
+// Kill kill a universal container
 func (cs *containerService) Kill(ctx context.Context, containerID string, signal string) error {
 	if util.IsContainerID(containerID) {
 		err := cs.docker.ContainerKill(ctx, containerID, signal)
@@ -283,6 +299,7 @@ func (cs *containerService) Kill(ctx context.Context, containerID string, signal
 	return nil
 }
 
+// Remove delete universal container and chaincode deployment
 func (cs *containerService) Remove(ctx context.Context, containerID string) error {
 	if util.IsContainerID(containerID) {
 		opts := types.ContainerRemoveOptions{}
@@ -297,6 +314,8 @@ func (cs *containerService) Remove(ctx context.Context, containerID string) erro
 		return nil
 	}
 
+	// delete configmap and deployment
+	// ignore error
 	name := strings.ReplaceAll(containerID, ".", "-")
 	_ = cs.k8s.DeleteChaincodeDeployment(ctx, name)
 	_ = cs.k8s.DeleteConfigMapDeployment(ctx, name)
@@ -304,6 +323,7 @@ func (cs *containerService) Remove(ctx context.Context, containerID string) erro
 	return nil
 }
 
+// Wait wait for universal container
 func (cs *containerService) Wait(ctx context.Context, containerID string) error {
 	if util.IsContainerID(containerID) {
 		okc, errc := cs.docker.ContainerWait(ctx, containerID, container.WaitConditionNotRunning)

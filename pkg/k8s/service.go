@@ -78,6 +78,9 @@ func (k8s *K8sClient) CreateChaincodeDeployment(
 	env []string,
 	cmd []string,
 ) error {
+	// replicas
+	replicas := int32(0)
+
 	// build environment variables
 	envs := make([]v1.EnvVar, 0, len(env))
 	if len(env) > 0 {
@@ -87,11 +90,13 @@ func (k8s *K8sClient) CreateChaincodeDeployment(
 				Name:  array[0],
 				Value: array[1],
 			})
+
+			if "CORE_PEER_TLS_ENABLED" == array[0] && "true" == array[1] {
+				replicas = 1
+			}
 		}
 	}
 
-	// replicas
-	replicas := int32(0)
 	// dns
 	var hostAlias []v1.HostAlias
 	if len(k8s.dns) > 0 {
@@ -130,7 +135,7 @@ func (k8s *K8sClient) CreateChaincodeDeployment(
 						{
 							Name:            name,
 							Image:           image,
-							ImagePullPolicy: v1.PullAlways,
+							ImagePullPolicy: v1.PullIfNotPresent,
 							Env:             envs,
 							Command:         cmd,
 						},
@@ -144,6 +149,8 @@ func (k8s *K8sClient) CreateChaincodeDeployment(
 	opts := metav1.CreateOptions{}
 	_, err := k8s.k8sClientSet.AppsV1().Deployments(k8s.namespace).Create(ctx, deployment, opts)
 	if err != nil {
+		log.Errorf("create deployment: %v", err)
+
 		return err
 	}
 
