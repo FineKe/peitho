@@ -30,6 +30,10 @@ const (
 	TLSClientRootCertFile string = "/etc/hyperledger/fabric/peer.crt"
 )
 
+const (
+	ChaincodePrefix = "chaincode"
+)
+
 type K8sClient struct {
 	k8sClientSet *kubernetes.Clientset
 	namespace    string
@@ -43,6 +47,7 @@ type K8sService interface {
 	DeleteChaincodeDeployment(ctx context.Context, name string) error
 	DeleteConfigMapDeployment(ctx context.Context, name string) error
 	QueryDeploymentStatus(ctx context.Context, name string) (bool, error)
+	ListDeploymentByPrefix(ctx context.Context, prefix string) ([]appsv1.Deployment, error)
 }
 
 // NewK8sClient new k8sclient from opt.
@@ -322,4 +327,15 @@ func (k8s *K8sClient) QueryDeploymentStatus(ctx context.Context, name string) (b
 	}
 
 	return false, err
+}
+
+func (k8s *K8sClient) ListDeploymentByPrefix(ctx context.Context, prefix string) ([]appsv1.Deployment, error) {
+	deployments, err := k8s.k8sClientSet.AppsV1().Deployments(k8s.namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		log.Errorf("list deployments failed: %v", err)
+
+		return nil, err
+	}
+
+	return deployments.Items, nil
 }

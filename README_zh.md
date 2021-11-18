@@ -88,6 +88,7 @@ spec:
   replicas: 1
   selector:
     matchLabels:
+      app: peitho
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -95,6 +96,8 @@ spec:
     type: RollingUpdate
   template:
     metadata:
+      labels:
+        app: peitho
     spec:
       containers:
       - image: tianrandailoving/peitho:latest
