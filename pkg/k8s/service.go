@@ -95,7 +95,7 @@ func (k8s *K8sClient) CreateChaincodeDeployment(
 				Value: array[1],
 			})
 
-			if "CORE_PEER_TLS_ENABLED" == array[0] && "false" == array[1] {
+			if array[0] == "CORE_PEER_TLS_ENABLED" && array[1] == "false" {
 				replicas = 1
 			}
 		}

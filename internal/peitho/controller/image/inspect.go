@@ -6,10 +6,11 @@ package image
 
 import (
 	"context"
-	"github.com/tianrandailove/peitho/internal/peitho/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/marmotedu/errors"
 
+	"github.com/tianrandailove/peitho/internal/peitho/service"
 	"github.com/tianrandailove/peitho/pkg/log"
 )
 
@@ -20,16 +21,17 @@ func (ic *ImageController) Inspect(c *gin.Context) {
 
 	value, err := ic.srv.Images().Inspect(context.Background(), imageID)
 	if err != nil {
-		switch err {
-		case service.ErrNoSuchImage:
+		if errors.Is(err, service.ErrNoSuchImage) {
 			c.JSON(404, gin.H{
 				"message": err.Error(),
 			})
-		default:
-			c.JSON(500, gin.H{
-				"message": err.Error(),
-			})
+
+			return
 		}
+
+		c.JSON(500, gin.H{
+			"message": err.Error(),
+		})
 
 		return
 	}

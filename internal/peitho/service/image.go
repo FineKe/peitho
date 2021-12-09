@@ -7,22 +7,22 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/docker/docker/api/types"
-	"github.com/marmotedu/errors"
-	"github.com/tianrandailove/peitho/pkg/docker"
-	"github.com/tianrandailove/peitho/pkg/log"
 	"io"
 	"io/ioutil"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/docker/docker/api/types"
+	"github.com/marmotedu/errors"
+
+	"github.com/tianrandailove/peitho/pkg/docker"
+	"github.com/tianrandailove/peitho/pkg/log"
 )
 
-var (
-	ErrNoSuchImage = errors.New("no such image")
-)
+var ErrNoSuchImage = errors.New("no such image")
 
-// DockerAuthentication define docker auth struct
+// DockerAuthentication define docker auth struct.
 type DockerAuthentication struct {
 	Username      string `json:"username"`
 	Password      string `json:"password"`
@@ -30,7 +30,7 @@ type DockerAuthentication struct {
 	Serveraddress string `json:"serveraddress"`
 }
 
-// ImageSrv define imageSrv
+// ImageSrv define imageSrv.
 type ImageSrv interface {
 	Build(ctx context.Context, dockerfile string, tags []string, content io.Reader) (io.ReadCloser, error)
 	Create(ctx context.Context, fromImage string) (io.ReadCloser, error)
@@ -53,9 +53,13 @@ func newImage(srv *service) *imageService {
 	}
 }
 
-// Build build an image and push it to registry
-func (i *imageService) Build(ctx context.Context, dockerfile string, tags []string, content io.Reader) (io.ReadCloser, error) {
-
+// Build build an image and push it to registry.
+func (i *imageService) Build(
+	ctx context.Context,
+	dockerfile string,
+	tags []string,
+	content io.Reader,
+) (io.ReadCloser, error) {
 	imageOptions := types.ImageBuildOptions{
 		Dockerfile: dockerfile,
 		Tags:       tags,
@@ -116,13 +120,12 @@ func (i *imageService) Build(ctx context.Context, dockerfile string, tags []stri
 	log.Debugf("RegistryAuth: %s", pushOpt.RegistryAuth)
 
 	readerCloser, pushErr := i.docker.ImagePush(ctx, newTag, pushOpt)
-	defer readerCloser.Close()
-
 	if pushErr != nil {
 		log.Errorf("push failed: %v", pushErr)
 
 		return nil, pushErr
 	}
+	defer readerCloser.Close()
 
 	pushResult, readErr := ioutil.ReadAll(readerCloser)
 	if readErr != nil {
@@ -137,7 +140,7 @@ func (i *imageService) Build(ctx context.Context, dockerfile string, tags []stri
 	return resp.Body, err
 }
 
-// Create pull a image
+// Create pull a image.
 func (i *imageService) Create(ctx context.Context, fromImage string) (io.ReadCloser, error) {
 	resp, err := i.docker.ImagePull(ctx, fromImage, types.ImagePullOptions{})
 	if err != nil {
@@ -149,7 +152,7 @@ func (i *imageService) Create(ctx context.Context, fromImage string) (io.ReadClo
 	return resp, nil
 }
 
-// Inspect inspect image information
+// Inspect inspect image information.
 func (i *imageService) Inspect(ctx context.Context, imageID string) (interface{}, error) {
 	if !strings.HasPrefix(imageID, i.docker.GetServerAddress()) {
 		// for chiancode, pull it firstly then inspect
@@ -179,7 +182,7 @@ func (i *imageService) Inspect(ctx context.Context, imageID string) (interface{}
 	return imageInspect, nil
 }
 
-// AddTag add a new tag for image
+// AddTag add a new tag for image.
 func (i *imageService) AddTag(ctx context.Context, imageTag, newTag string) error {
 	if err := i.docker.ImageTag(ctx, imageTag, newTag); err != nil {
 		log.Errorf("add tag failed: %v", err)
@@ -190,7 +193,7 @@ func (i *imageService) AddTag(ctx context.Context, imageTag, newTag string) erro
 	return nil
 }
 
-// Push push a image
+// Push push a image.
 func (i *imageService) Push(ctx context.Context, imageTag string) (io.ReadCloser, error) {
 	auth, err := i.docker.RegistryAuth()
 	if err != nil {

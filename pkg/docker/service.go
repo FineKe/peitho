@@ -74,6 +74,7 @@ type DockerService interface {
 	ImagePull(ctx context.Context, ref string, options types.ImagePullOptions) (io.ReadCloser, error)
 	ImagePush(ctx context.Context, ref string, options types.ImagePushOptions) (io.ReadCloser, error)
 	ImageTag(ctx context.Context, image, ref string) error
+	ImageLoad(ctx context.Context, input io.Reader, quiet bool) (types.ImageLoadResponse, error)
 }
 
 // new docker client from opt.
@@ -230,4 +231,8 @@ func (d *Docker) ImagePush(ctx context.Context, ref string, options types.ImageP
 
 func (d *Docker) ImageTag(ctx context.Context, image, ref string) error {
 	return d.DockerClient.ImageTag(ctx, image, ref)
+}
+
+func (d *Docker) ImageLoad(ctx context.Context, input io.Reader, quiet bool) (types.ImageLoadResponse, error) {
+	return d.DockerClient.ImageLoad(ctx, input, quiet)
 }
