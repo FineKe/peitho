@@ -2,4 +2,22 @@
 // Use of this source code is governed by a MIT style
 // license that can be found in the LICENSE file.
 
-package puller
+package main
+
+import (
+	"math/rand"
+	"os"
+	"runtime"
+	"time"
+
+	"github.com/tianrandailove/peitho/internal/puller"
+)
+
+func main() {
+	rand.Seed(time.Now().UTC().UnixNano())
+	if len(os.Getenv("GOMAXPROCS")) == 0 {
+		runtime.GOMAXPROCS(runtime.NumCPU())
+	}
+
+	puller.NewApp("puller").Run()
+}

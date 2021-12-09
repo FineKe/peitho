@@ -21,6 +21,7 @@ func NewApp(basename string) *app.App {
 		app.WithDescription(commandDesc),
 		app.WithDefaultValidArgs(),
 		app.WithRunFunc(run(opts)),
+		app.WithNoConfig(),
 	)
 
 	return app

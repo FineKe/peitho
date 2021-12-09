@@ -6,6 +6,5 @@ FROM BASE_IMAGE
 MAINTAINER KeFan <litesky@foxmail.com>
 
 ADD .. /root/
-EXPOSE 8080
 WORKDIR /root
 CMD ["./puller"]
