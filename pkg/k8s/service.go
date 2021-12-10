@@ -38,6 +38,7 @@ type K8sClient struct {
 
 type K8sService interface {
 	CreateChaincodeDeployment(ctx context.Context, name string, image string, env []string, cmd []string) error
+	CreateChaincodeDeploymentWithPuller(ctx context.Context, name string, image string, env []string, cmd []string, pullerImag string, pullerCMD []string) error
 	UpdateDeployment(ctx context.Context, name string) error
 	CreateConfigMap(ctx context.Context, name string, data map[string]string) error
 	DeleteChaincodeDeployment(ctx context.Context, name string) error
@@ -95,7 +96,7 @@ func (k8s *K8sClient) CreateChaincodeDeployment(
 				Value: array[1],
 			})
 
-			if "CORE_PEER_TLS_ENABLED" == array[0] && "false" == array[1] {
+			if array[0] == "CORE_PEER_TLS_ENABLED" && array[1] == "false" {
 				replicas = 1
 			}
 		}
@@ -140,6 +141,110 @@ func (k8s *K8sClient) CreateChaincodeDeployment(
 							Name:            name,
 							Image:           image,
 							ImagePullPolicy: v1.PullIfNotPresent,
+							Env:             envs,
+							Command:         cmd,
+						},
+					},
+					HostAliases: hostAlias,
+				},
+			},
+		},
+	}
+
+	opts := metav1.CreateOptions{}
+	_, err := k8s.k8sClientSet.AppsV1().Deployments(k8s.namespace).Create(ctx, deployment, opts)
+	if err != nil {
+		log.Errorf("create deployment: %v", err)
+
+		return err
+	}
+
+	return nil
+}
+
+func (k8s *K8sClient) CreateChaincodeDeploymentWithPuller(ctx context.Context, name string, image string, env []string, cmd []string, pullerImag string, pullerCMD []string) error {
+	// replicas
+	replicas := int32(0)
+
+	// build environment variables
+	envs := make([]v1.EnvVar, 0, len(env))
+	if len(env) > 0 {
+		for _, s := range env {
+			array := strings.Split(s, "=")
+			envs = append(envs, v1.EnvVar{
+				Name:  array[0],
+				Value: array[1],
+			})
+
+			if array[0] == "CORE_PEER_TLS_ENABLED" && array[1] == "false" {
+				replicas = 1
+			}
+		}
+	}
+
+	// dns
+	var hostAlias []v1.HostAlias
+	if len(k8s.dns) > 0 {
+		for _, s := range k8s.dns {
+			strs := strings.Split(s, ":")
+			hostAlias = append(hostAlias, v1.HostAlias{
+				IP:        strs[0],
+				Hostnames: []string{strs[1]},
+			})
+		}
+	}
+
+	deployment := &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Deployment",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RecreateDeploymentStrategyType,
+			},
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"app": name},
+			},
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   name,
+					Labels: map[string]string{"app": name},
+				},
+				Spec: v1.PodSpec{
+					Volumes: []v1.Volume{
+						v1.Volume{
+							Name: "docker",
+							VolumeSource: v1.VolumeSource{
+								HostPath: &v1.HostPathVolumeSource{
+									Path: "/var/run/",
+								},
+							},
+						},
+					},
+					InitContainers: []v1.Container{
+						{
+							Name:            "puller",
+							Image:           pullerImag,
+							ImagePullPolicy: v1.PullAlways,
+							Command:         pullerCMD,
+							VolumeMounts: []v1.VolumeMount{
+								v1.VolumeMount{
+									Name:      "docker",
+									MountPath: "/host/var/run/",
+								},
+							},
+						},
+					},
+					Containers: []v1.Container{
+						{
+							Name:            name,
+							Image:           image,
+							ImagePullPolicy: v1.PullNever,
 							Env:             envs,
 							Command:         cmd,
 						},

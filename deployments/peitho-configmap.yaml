@@ -28,7 +28,6 @@ data:
           admin
         password: #密码
           harbor
-
     log:
       name: peitho # Logger的名字
       development: true # 是否是开发模式。如果是开发模式，会对DPanicLevel进行堆栈跟踪。

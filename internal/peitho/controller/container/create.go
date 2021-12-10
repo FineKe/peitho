@@ -6,7 +6,9 @@ package container
 
 import (
 	"context"
+
 	"github.com/gin-gonic/gin"
+	"github.com/marmotedu/errors"
 
 	"github.com/tianrandailove/peitho/internal/peitho/service"
 	"github.com/tianrandailove/peitho/pkg/log"
@@ -27,7 +29,7 @@ func (cc *ContainerController) Create(c *gin.Context) {
 
 	result, err := cc.srv.Containers().Create(context.Background(), ID, container)
 	if err != nil {
-		if service.ErrNoSuchImage == err {
+		if errors.Is(err, service.ErrNoSuchImage) {
 			c.JSON(404, gin.H{
 				"message": err.Error(),
 			})
