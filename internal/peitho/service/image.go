@@ -7,7 +7,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/tianrandailove/peitho/pkg/options"
 	"io"
 	"io/ioutil"
 	"os"
@@ -20,6 +19,7 @@ import (
 
 	"github.com/tianrandailove/peitho/pkg/docker"
 	"github.com/tianrandailove/peitho/pkg/log"
+	"github.com/tianrandailove/peitho/pkg/options"
 )
 
 var ErrNoSuchImage = errors.New("no such image")

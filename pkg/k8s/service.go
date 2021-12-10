@@ -38,7 +38,15 @@ type K8sClient struct {
 
 type K8sService interface {
 	CreateChaincodeDeployment(ctx context.Context, name string, image string, env []string, cmd []string) error
-	CreateChaincodeDeploymentWithPuller(ctx context.Context, name string, image string, env []string, cmd []string, pullerImag string, pullerCMD []string) error
+	CreateChaincodeDeploymentWithPuller(
+		ctx context.Context,
+		name string,
+		image string,
+		env []string,
+		cmd []string,
+		pullerImag string,
+		pullerCMD []string,
+	) error
 	UpdateDeployment(ctx context.Context, name string) error
 	CreateConfigMap(ctx context.Context, name string, data map[string]string) error
 	DeleteChaincodeDeployment(ctx context.Context, name string) error
@@ -162,7 +170,15 @@ func (k8s *K8sClient) CreateChaincodeDeployment(
 	return nil
 }
 
-func (k8s *K8sClient) CreateChaincodeDeploymentWithPuller(ctx context.Context, name string, image string, env []string, cmd []string, pullerImag string, pullerCMD []string) error {
+func (k8s *K8sClient) CreateChaincodeDeploymentWithPuller(
+	ctx context.Context,
+	name string,
+	image string,
+	env []string,
+	cmd []string,
+	pullerImag string,
+	pullerCMD []string,
+) error {
 	// replicas
 	replicas := int32(0)
 
@@ -217,7 +233,7 @@ func (k8s *K8sClient) CreateChaincodeDeploymentWithPuller(ctx context.Context, n
 				},
 				Spec: v1.PodSpec{
 					Volumes: []v1.Volume{
-						v1.Volume{
+						{
 							Name: "docker",
 							VolumeSource: v1.VolumeSource{
 								HostPath: &v1.HostPathVolumeSource{
@@ -233,7 +249,7 @@ func (k8s *K8sClient) CreateChaincodeDeploymentWithPuller(ctx context.Context, n
 							ImagePullPolicy: v1.PullAlways,
 							Command:         pullerCMD,
 							VolumeMounts: []v1.VolumeMount{
-								v1.VolumeMount{
+								{
 									Name:      "docker",
 									MountPath: "/host/var/run/",
 								},
