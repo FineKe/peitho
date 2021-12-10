@@ -10,7 +10,9 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"github.com/tianrandailove/peitho/pkg/options"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -98,6 +100,28 @@ func (cs *containerService) Create(ctx context.Context, containerID string, c Co
 		}
 
 		return &ContainerResult{Id: response.ID, Warnings: response.Warnings}, err
+	}
+
+	// self delivery
+	if cs.docker.GetImageMode() == options.IMAGE_MODE_DELIVERY {
+		fileName := fmt.Sprintf("%s.tar", c.Image)
+		_, err := os.Stat(fileName)
+		if err != nil {
+			log.Errorf("%s not exists: %v", fileName, err)
+
+			return nil, ErrNoSuchImage
+		}
+		podName := util.GetDeploymentName(containerID)
+		log.Infof("create chiancode deployment, podname: %s.", podName)
+		// create chaincode deployment
+		pullerCMD := []string{"./puller", fmt.Sprintf("--image=%s", c.Image), fmt.Sprintf("--pullAddress=%s", cs.docker.GetPullerAccessAddress())}
+		pullerCMD = append(pullerCMD, "--docker.endpoint=unix:///host/var/run/docker.sock")
+		if err := cs.k8s.CreateChaincodeDeploymentWithPuller(ctx, podName, c.Image, c.Env, c.Cmd, cs.docker.GetPullerImage(), pullerCMD); err != nil {
+
+			return nil, err
+		}
+
+		return &ContainerResult{Id: podName, Warnings: nil}, nil
 	}
 
 	// deployment image tag

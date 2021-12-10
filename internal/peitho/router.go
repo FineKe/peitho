@@ -39,4 +39,5 @@ func installController(g *gin.Engine) {
 	g.POST("/images/create", imageController.Create)
 	g.GET("/images/:name/*json", imageController.Inspect)
 	g.POST("/build", imageController.Build)
+	g.GET("/tar/:name", imageController.Download)
 }

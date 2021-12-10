@@ -17,7 +17,7 @@ func Run(cfg *config.Config) error {
 	// new docker client
 	dockerService, err := docker.NewDockerService(&options.DockerOption{
 		Endpoint: cfg.PullerOption.DockerEndpoint,
-	})
+	}, options.NewPeithoOption())
 	if err != nil {
 		panic(err)
 	}

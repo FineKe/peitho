@@ -7,8 +7,10 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/tianrandailove/peitho/pkg/options"
 	"io"
 	"io/ioutil"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -24,10 +26,12 @@ var ErrNoSuchImage = errors.New("no such image")
 
 // DockerAuthentication define docker auth struct.
 type DockerAuthentication struct {
-	Username      string `json:"username"`
-	Password      string `json:"password"`
-	Email         string `json:"email"`
-	Serveraddress string `json:"serveraddress"`
+	Username            string `json:"username"`
+	Password            string `json:"password"`
+	Email               string `json:"email"`
+	Serveraddress       string `json:"serveraddress"`
+	ImageMode           string `json:"imageMode"`
+	PullerAccessAddress string `json:"pullerAccessAddress"`
 }
 
 // ImageSrv define imageSrv.
@@ -95,6 +99,38 @@ func (i *imageService) Build(
 	i.lock.Unlock()
 
 	log.Infof("build image %s complete", tags[0])
+
+	// self delivery
+	if i.docker.GetImageMode() == options.IMAGE_MODE_DELIVERY {
+		// save image to tar
+		fileName := fmt.Sprintf("%s.tar", tags[0])
+		_, err := os.Stat(fileName)
+		if err == nil {
+			os.Remove(fileName)
+		}
+		file, err := os.Create(fileName)
+		if err != nil {
+			log.Errorf("create %s failed: %v", fileName, err)
+
+			return resp.Body, err
+		}
+		tarReader, err := i.docker.ImageSave(ctx, tags)
+		if err != nil {
+			log.Errorf("save %s failed: %v", fileName, err)
+
+			return nil, err
+		}
+		length, err := io.Copy(file, tarReader)
+		if err != nil {
+			log.Errorf("copy data to %s failed: %v", file, err)
+
+			return nil, err
+		}
+		log.Infof("%s's size :%d byte", fileName, length)
+
+		return resp.Body, nil
+	}
+
 	log.Infof("ready push")
 
 	oldTag := tags[0]
