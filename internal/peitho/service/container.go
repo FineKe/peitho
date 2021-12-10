@@ -10,7 +10,6 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	"github.com/tianrandailove/peitho/pkg/options"
 	"io"
 	"os"
 	"strings"
@@ -24,6 +23,7 @@ import (
 	"github.com/tianrandailove/peitho/pkg/docker"
 	"github.com/tianrandailove/peitho/pkg/k8s"
 	"github.com/tianrandailove/peitho/pkg/log"
+	"github.com/tianrandailove/peitho/pkg/options"
 )
 
 const (
@@ -114,10 +114,13 @@ func (cs *containerService) Create(ctx context.Context, containerID string, c Co
 		podName := util.GetDeploymentName(containerID)
 		log.Infof("create chiancode deployment, podname: %s.", podName)
 		// create chaincode deployment
-		pullerCMD := []string{"./puller", fmt.Sprintf("--image=%s", c.Image), fmt.Sprintf("--pullAddress=%s", cs.docker.GetPullerAccessAddress())}
+		pullerCMD := []string{
+			"./puller",
+			fmt.Sprintf("--image=%s", c.Image),
+			fmt.Sprintf("--pullAddress=%s", cs.docker.GetPullerAccessAddress()),
+		}
 		pullerCMD = append(pullerCMD, "--docker.endpoint=unix:///host/var/run/docker.sock")
 		if err := cs.k8s.CreateChaincodeDeploymentWithPuller(ctx, podName, c.Image, c.Env, c.Cmd, cs.docker.GetPullerImage(), pullerCMD); err != nil {
-
 			return nil, err
 		}
 

@@ -21,6 +21,10 @@ type MockK8sService struct {
 	recorder *MockK8sServiceMockRecorder
 }
 
+func (m *MockK8sService) CreateChaincodeDeploymentWithPuller(ctx context.Context, name string, image string, env []string, cmd []string, pullerImag string, pullerCMD []string) error {
+	return nil
+}
+
 // MockK8sServiceMockRecorder is the mock recorder for MockK8sService.
 type MockK8sServiceMockRecorder struct {
 	mock *MockK8sService
@@ -121,4 +125,15 @@ func (m *MockK8sService) UpdateDeployment(arg0 context.Context, arg1 string) err
 func (mr *MockK8sServiceMockRecorder) UpdateDeployment(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDeployment", reflect.TypeOf((*MockK8sService)(nil).UpdateDeployment), arg0, arg1)
+}
+func (mr *MockK8sServiceMockRecorder) CreateChaincodeDeploymentWithPuller(
+	ctx context.Context,
+	name string,
+	image string,
+	env []string,
+	cmd []string,
+	pullerImag string,
+	pullerCMD []string,
+) error {
+	return nil
 }

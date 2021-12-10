@@ -16,11 +16,11 @@ const (
 	IMAGE_MODE_DELIVERY = "delivery"
 )
 
-// PeithoOption defines options for peitho
+// PeithoOption defines options for peitho.
 type PeithoOption struct {
-	ImageMode           string `json:"imageMode" mapstructure:"imageMode"`
+	ImageMode           string `json:"imageMode"           mapstructure:"imageMode"`
 	PullerAccessAddress string `json:"pullerAccessAddress" mapstructure:"pullerAccessAddress"`
-	PullerImage         string `json:"pullerImage" mapstructure:"pullerImage"`
+	PullerImage         string `json:"pullerImage"         mapstructure:"pullerImage"`
 }
 
 // NewPeithoOption create a `zero` value instance.
@@ -35,7 +35,7 @@ func NewPeithoOption() *PeithoOption {
 func (o *PeithoOption) Validate() []error {
 	errs := []error{}
 
-	if o.ImageMode != IMAGE_MODE_DELIVERY || o.ImageMode != IMAGE_MODE_REGISTRY {
+	if IMAGE_MODE_DELIVERY != o.ImageMode && IMAGE_MODE_REGISTRY != o.ImageMode {
 		errs = append(errs, fmt.Errorf("imageMode must be registry or deivery"))
 	}
 
@@ -52,8 +52,18 @@ func (o *PeithoOption) Validate() []error {
 
 // AddFlags bind command flag.
 func (o *PeithoOption) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&(o.ImageMode), "imageMode", o.ImageMode, "how to delivery chaincode image, if choose registry mode, then pull image from registry, else from peitho")
-	fs.StringVar(&(o.PullerAccessAddress), "pullerAccessAddress", o.PullerAccessAddress, "puller access the url for pulling image")
+	fs.StringVar(
+		&(o.ImageMode),
+		"imageMode",
+		o.ImageMode,
+		"how to delivery chaincode image, if choose registry mode, then pull image from registry, else from peitho",
+	)
+	fs.StringVar(
+		&(o.PullerAccessAddress),
+		"pullerAccessAddress",
+		o.PullerAccessAddress,
+		"puller access the url for pulling image",
+	)
 	fs.StringVar(&(o.PullerImage), "pullerImage", o.PullerImage, "the pullerImage for chancode initcontainer")
 }
 

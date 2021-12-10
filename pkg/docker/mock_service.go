@@ -27,6 +27,25 @@ type MockDockerService struct {
 	recorder *MockDockerServiceMockRecorder
 }
 
+func (m *MockDockerService) GetImageMode() string {
+	return ""
+}
+
+func (m *MockDockerService) GetPullerAccessAddress() string {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *MockDockerService) GetPullerImage() string {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *MockDockerService) ImageSave(ctx context.Context, imageIDs []string) (io.ReadCloser, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (m *MockDockerService) ImageLoad(ctx context.Context, input io.Reader, quiet bool) (types.ImageLoadResponse, error) {
 	return types.ImageLoadResponse{}, nil
 }
@@ -295,4 +314,14 @@ func (m *MockDockerService) RegistryAuth() (string, error) {
 func (mr *MockDockerServiceMockRecorder) RegistryAuth() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegistryAuth", reflect.TypeOf((*MockDockerService)(nil).RegistryAuth))
+}
+
+func (mr *MockDockerServiceMockRecorder) GetImageMode() string {
+	return ""
+}
+func (mr *MockDockerServiceMockRecorder) GetPullerAccessAddress() string {
+	return ""
+}
+func (mr *MockDockerServiceMockRecorder) GetPullerImage() string {
+	return ""
 }

@@ -1,10 +1,16 @@
+// Copyright 2021 Ke Fan <litesky@foxmail.com>. All rights reserved.
+// Use of this source code is governed by a MIT style
+// license that can be found in the LICENSE file.
+
 package image
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/tianrandailove/peitho/pkg/log"
 	"os"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/tianrandailove/peitho/pkg/log"
 )
 
 func (ic *ImageController) Download(c *gin.Context) {
@@ -17,8 +23,7 @@ func (ic *ImageController) Download(c *gin.Context) {
 		return
 	}
 	fileName := fmt.Sprintf("%s.tar", imageID)
-	_, err := os.Stat(fileName)
-	if err != nil {
+	if _, err := os.Stat(fileName); err != nil {
 		log.Errorf("file not exists:%v", err)
 		c.JSON(404, gin.H{"message": err.Error()})
 
@@ -28,5 +33,4 @@ func (ic *ImageController) Download(c *gin.Context) {
 	c.Header("Content-Disposition", "attachment; filename="+fileName)
 	c.Header("Content-Transfer-Encoding", "binary")
 	c.File(fileName)
-	return
 }
