@@ -9,6 +9,7 @@ The chaincode of Hyperledger Fabric can be handed over to k8s for management, wh
 - There is no intrusion to the fabric, just configure the CORE_VM_ENDPOINT environment variable to Peitho service.
 - Support fabric 1.4.x 2.0 and above
 - Chaincode mirroring supports two mirror distribution modes: registry central(like harbor) mode and self delivery mode
+- Support auto clean chaincode when fabric removed
 ## How Peitho achieve
 ### Architecture
 ![Architecture](./docs/images/peitho-architecture.png)
@@ -50,6 +51,9 @@ data:
   kubeconfig: |-
     #k8s access configuration file
   peitho.yml: |-
+    sweeper:
+      enable: true # enable to auto clean died chaincode
+      interval: 5 # check interval 
     peitho:
       imageMode: delivery #choose a mode: registry or delivery, if you choose registry, please configure docker.registry
       pullerAccessAddress: http://peitho:8080/tar #the address of peihto to download image tar

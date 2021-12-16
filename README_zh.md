@@ -9,6 +9,7 @@
 - 对fabric无任何侵入，只需将CORE_VM_ENDPOINT环境变量配置成Peitho服务即可
 - 支持fabric 1.4.x 2.0 以上
 - chaincode镜像支持两种镜像分发模式：镜像仓库中心模式、自分发模式
+- 支持自动清理chaincode（当fabric节点移除时）
 ## 实现
 ### 软件架构
 ![架构图](./docs/images/peitho-architecture.png)
@@ -48,6 +49,9 @@ data:
   kubeconfig: |-
     #填入你获取的k8s 访问凭证
   peitho.yml: |-
+    sweeper:
+      enable: true # 是否开启自动清扫
+      interval: 5 #自动清扫时间周期，单位秒
     peitho:
       imageMode: delivery #选择一种模式：registry or delivery，如果选择了registry，那么请配置好docker.registry
       pullerAccessAddress: http://peitho:8080/tar #pitho 的tar包下载地址
