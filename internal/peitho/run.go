@@ -30,7 +30,7 @@ func Run(cfg *config.Config) error {
 	go sweeper.Start()
 
 	// new docker client
-	dockerService, err := docker.NewDockerService(cfg.DockerOption)
+	dockerService, err := docker.NewDockerService(cfg.DockerOption, cfg.PeithoOption)
 	if err != nil {
 		panic(err)
 	}

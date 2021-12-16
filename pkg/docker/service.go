@@ -26,15 +26,20 @@ const DOCKER_VERSION = "1.32"
 
 // Docker.
 type Docker struct {
-	DockerClient *client.Client
-	Registry     *Registry
+	DockerClient        *client.Client
+	Registry            *Registry
+	ImageMode           string
+	PullerAccessAddress string
+	PullerImage         string
 }
 
 type DockerService interface {
 	RegistryAuth() (string, error)
 	GetServerAddress() string
 	GetProjectName() string
-
+	GetImageMode() string
+	GetPullerAccessAddress() string
+	GetPullerImage() string
 	ContainerAttach(
 		ctx context.Context,
 		container string,
@@ -74,10 +79,12 @@ type DockerService interface {
 	ImagePull(ctx context.Context, ref string, options types.ImagePullOptions) (io.ReadCloser, error)
 	ImagePush(ctx context.Context, ref string, options types.ImagePushOptions) (io.ReadCloser, error)
 	ImageTag(ctx context.Context, image, ref string) error
+	ImageLoad(ctx context.Context, input io.Reader, quiet bool) (types.ImageLoadResponse, error)
+	ImageSave(ctx context.Context, imageIDs []string) (io.ReadCloser, error)
 }
 
 // new docker client from opt.
-func newDocker(opt *options.DockerOption) (*Docker, error) {
+func newDocker(opt *options.DockerOption, option *options.PeithoOption) (*Docker, error) {
 	docker, err := client.NewClientWithOpts(client.WithHost(opt.Endpoint), client.WithVersion(DOCKER_VERSION))
 	if err != nil {
 		log.Errorf("new docker client failed: %v", err)
@@ -101,12 +108,15 @@ func newDocker(opt *options.DockerOption) (*Docker, error) {
 			Serveraddress: opt.Registry.Serveraddress,
 			Project:       opt.Registry.Project,
 		},
+		PullerAccessAddress: option.PullerAccessAddress,
+		ImageMode:           option.ImageMode,
+		PullerImage:         option.PullerImage,
 	}, nil
 }
 
 // NewDockerService new docker service instance.
-func NewDockerService(opt *options.DockerOption) (*Docker, error) {
-	return newDocker(opt)
+func NewDockerService(opt *options.DockerOption, option *options.PeithoOption) (*Docker, error) {
+	return newDocker(opt, option)
 }
 
 type Registry struct {
@@ -147,6 +157,18 @@ func (d *Docker) GetServerAddress() string {
 
 func (d *Docker) GetProjectName() string {
 	return d.Registry.Project
+}
+
+func (d *Docker) GetImageMode() string {
+	return d.ImageMode
+}
+
+func (d *Docker) GetPullerAccessAddress() string {
+	return d.PullerAccessAddress
+}
+
+func (d *Docker) GetPullerImage() string {
+	return d.PullerImage
 }
 
 func (d *Docker) ContainerAttach(
@@ -230,4 +252,12 @@ func (d *Docker) ImagePush(ctx context.Context, ref string, options types.ImageP
 
 func (d *Docker) ImageTag(ctx context.Context, image, ref string) error {
 	return d.DockerClient.ImageTag(ctx, image, ref)
+}
+
+func (d *Docker) ImageLoad(ctx context.Context, input io.Reader, quiet bool) (types.ImageLoadResponse, error) {
+	return d.DockerClient.ImageLoad(ctx, input, quiet)
+}
+
+func (d *Docker) ImageSave(ctx context.Context, imageIDs []string) (io.ReadCloser, error) {
+	return d.DockerClient.ImageSave(ctx, imageIDs)
 }

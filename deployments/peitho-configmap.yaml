@@ -5,8 +5,12 @@
 apiVersion: v1
 data:
   kubeconfig: |-
-
+    #k8s 访问配置文件
   peitho.yml: |-
+    peitho:
+      imageMode: delivery #registry of delivery
+      pullerAccessAddress: http://peitho:8080/tar
+      pullerImage: x.x.x.x:8099/platform/puller-amd64:v-2-g5cada04
     k8s:
       namespace: fabric #命名空间
       kubeconfig: /root/kube/kubeconfig #k8s访问配置文件
@@ -28,7 +32,6 @@ data:
           admin
         password: #密码
           harbor
-
     log:
       name: peitho # Logger的名字
       development: true # 是否是开发模式。如果是开发模式，会对DPanicLevel进行堆栈跟踪。

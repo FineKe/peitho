@@ -6,6 +6,7 @@ package peitho
 
 import (
 	"github.com/gin-gonic/gin"
+
 	"github.com/tianrandailove/peitho/internal/peitho/controller/container"
 	"github.com/tianrandailove/peitho/internal/peitho/controller/image"
 	"github.com/tianrandailove/peitho/internal/peitho/service"
@@ -38,4 +39,5 @@ func installController(g *gin.Engine) {
 	g.POST("/images/create", imageController.Create)
 	g.GET("/images/:name/*json", imageController.Inspect)
 	g.POST("/build", imageController.Build)
+	g.GET("/tar/:name", imageController.Download)
 }

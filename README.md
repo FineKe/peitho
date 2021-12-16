@@ -8,8 +8,16 @@ The chaincode of Hyperledger Fabric can be handed over to k8s for management, wh
 - K8s fully managed chaincode
 - There is no intrusion to the fabric, just configure the CORE_VM_ENDPOINT environment variable to Peitho service.
 - Support fabric 1.4.x 2.0 and above
-## Architecture
+- Chaincode mirroring supports two mirror distribution modes: registry central(like harbor) mode and self delivery mode
+## How Peitho achieve
+### Architecture
 ![Architecture](./docs/images/peitho-architecture.png)
+### Two prcoess
+peitho has two modes, one is mirror center mode and the other is self-distribution mode
+1. registry mode, after the chaincode image is built, it will be pushed to the registry
+   ![架构图](./docs/images/registry_mode.png)
+2. self delivery mode, after the chaincode image is built, it is saved in peihto. The initial container puller in the deployment will download the image from peihto and use docker to load it to the local host.
+   ![架构图](./docs/images/self_delivery_mode.png)
 
 ## Getting Started
 ### Building
@@ -27,6 +35,10 @@ make build
 make image
 ```
 ## Using
+### Guarantee
+> Building The chaincode image needs to use the two images: fabric-ccenv and fabric-baseos. Make sure that these two images can be pulled down by the host machine docker where the peitho service is located, so as to complete the chaincode image construction
+
+> Through the environment variables of the peer (CORE_CHAINCODE_BUILDER, CORE_CHAINCODE_GOLANG_RUNTIME), you can customize the image tag of fabic-ccenv and fabric-baseos to tell pehito to pull
 1. configure peitho-configmap.yaml
 ```yaml
 # Copyright 2021 Ke Fan <litesky@foxmail.com>. All rights reserved.
@@ -38,6 +50,10 @@ data:
   kubeconfig: |-
     #k8s access configuration file
   peitho.yml: |-
+    peitho:
+      imageMode: delivery #choose a mode: registry or delivery, if you choose registry, please configure docker.registry
+      pullerAccessAddress: http://peitho:8080/tar #the address of peihto to download image tar
+      pullerImage: x.x.x.x:8099/platform/puller-amd64:v-2-g5cada04 #image tag of puller, the initcontainer of chaincode deployment
     k8s:
       namespace: fabric #namespace 
       kubeconfig: /root/kube/kubeconfig #k8s access configuration file path
