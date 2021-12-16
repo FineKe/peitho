@@ -6,6 +6,7 @@ package peitho
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/tianrandailove/peitho/pkg/sweeper"
 
 	"github.com/tianrandailove/peitho/internal/peitho/config"
 	"github.com/tianrandailove/peitho/internal/peitho/service"
@@ -20,6 +21,13 @@ func Run(cfg *config.Config) error {
 	if err != nil {
 		panic(err)
 	}
+
+	// new sweeper
+	sweeper, err := sweeper.NewPeithoSweeper(k8sService, cfg.Sweeperption)
+	if err != nil {
+		panic(err)
+	}
+	go sweeper.Start()
 
 	// new docker client
 	dockerService, err := docker.NewDockerService(cfg.DockerOption, cfg.PeithoOption)
