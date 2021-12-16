@@ -18,7 +18,7 @@ type Options struct {
 	K8sOption    *options.K8sOption     `json:"k8s"    mapstructure:"k8s"`
 	DockerOption *options.DockerOption  `json:"docker" mapstructure:"docker"`
 	Log          *log.Options           `json:"log"    mapstructure:"log"`
-	Sweeperption *options.SweeperOption `json:"sweeperoption" mapstructure:"sweeperoption"`
+	Sweeperption *options.SweeperOption `json:"sweeper" mapstructure:"sweeper"`
 }
 
 // NewOptions creates a new Options object with default parameters.
